@@ -28,18 +28,26 @@ int main()
 
     uint8_t reading_left = readLeftSensor();
 
-    if (reading_left > reading_right){
+    int16_t error = reading_right - reading_left;
+
+    if (error < 0){
       // Turn to the left
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
       OCR0A = ROBOT_SPEED_LEFT;
       OCR0B = ROBOT_SPEED_RIGHT + TURN_RATE;
     }
-    else{
+    else if (error > 0){
       // Turn to the right
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
       OCR0A = ROBOT_SPEED_LEFT + TURN_RATE;
+      OCR0B = ROBOT_SPEED_RIGHT;
+    }
+    else{
+      // Go straight
+      PORTB |= (1<<2)|(1<<1);
+      OCR0A = ROBOT_SPEED_LEFT;
       OCR0B = ROBOT_SPEED_RIGHT;
     }
 
