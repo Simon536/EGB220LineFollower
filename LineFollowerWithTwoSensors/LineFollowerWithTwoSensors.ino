@@ -2,18 +2,22 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 70
-#define ROBOT_SPEED_LEFT 50
+#define ROBOT_SPEED_RIGHT 90
+#define ROBOT_SPEED_LEFT 70
 #define TURN_RATE 25
+#define MAX_DESIRED_ERROR 40;
 
 // This code is designed for use with two sensors.
 // The left sensor should be connected to PD7 (sensor 6).
 // The right sensor should be connected to PF6 (sensor 3).
 
+// Scaling factor for error signal.
+uint8_t error_scaler = 1;
+
 int main()
 {
   initADC();
-  initPWM();
+  error_scaler = calibrateSensorValues();
 
   // Turn on IR LEDs.
   DDRB |= (1<<3);
@@ -22,42 +26,90 @@ int main()
   // Enable LED2 and LED3
   DDRB |= (1<<1)|(1<<2);
 
+  initPWM();
+
   while (1)
   {
-    // Clear MUX bits
-    ADMUX &= ~(0b00011111);
-    ADCSRB &= ~(1<<5);
-    // Set MUX bits to use ADC6 (sensor 3)
-    ADMUX |= 0b00000110;
-    triggerADC();
-    uint8_t reading_right = ADCH;
+    uint8_t reading_right = readRightSensor();
+    uint8_t reading_left = readLeftSensor();
+    int16_t error = reading_right - reading_left;
 
-    // Clear MUX bits
-    ADMUX &= ~(0b00011111);
-    ADCSRB &= ~(1<<5);
-    // Set MUX bits to use ADC10 (sensor 6)
-    ADMUX |= 0b00000010;
-    ADCSRB |= (1<<5);
-    triggerADC();
-    uint8_t reading_left = ADCH;
+    OCR0A = ROBOT_SPEED_LEFT + (error / error_scaler);
+    OCR0B = ROBOT_SPEED_RIGHT - (error / error_scaler);
 
-    if (reading_left > reading_right){
+    if (error < 0){
       // Turn to the left
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
-      OCR0A = ROBOT_SPEED_LEFT;
-      OCR0B = ROBOT_SPEED_RIGHT + TURN_RATE;
     }
-    else{
+    else if (error > 0){
       // Turn to the right
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
-      OCR0A = ROBOT_SPEED_LEFT + TURN_RATE;
-      OCR0B = ROBOT_SPEED_RIGHT;
+    }
+    else{
+      // Go straight
+      PORTB |= (1<<2)|(1<<1);
     }
 
-    _delay_ms(50);
+    // This control loop repeats at most 40 times per second.
+    _delay_ms(25);
   }
+}
+
+// Find the maximum and minimum error values under current conditions.
+uint8_t calibrateSensorValues(){
+  // Set up calibration variables. These values will be overwritten during the calibration phase.
+  int16_t calibrated_min_error = 500;
+  int16_t calibrated_max_error = -500;
+
+  // Turn on both debug LEDs
+  PORTB |= (1<<2)|(1<<1);
+
+  for (int i = 0; i < 2000; i++){
+    uint8_t reading_right = readRightSensor();
+    uint8_t reading_left = readLeftSensor();
+    int16_t error = reading_right - reading_left;
+
+    if (error > calibrated_max_error){
+      calibrated_max_error = error;
+    }
+    if (error < calibrated_min_error){
+      calibrated_min_error = error;
+    }
+    _delay_ms(2);
+  }
+
+  // Warn user that calibration is complete by flashing LEDs.
+  for (int i = 0; i < 5; i++){
+    PORTB |= (1<<2)|(1<<1);
+    _delay_ms(500);
+    PORTB &= ~((1<<2)|(1<<1));
+    _delay_ms(500);
+  }
+
+  return calibrated_max_error/MAX_DESIRED_ERROR;
+}
+
+uint8_t readRightSensor(){
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+  // Set MUX bits to use ADC6 (sensor 3)
+  ADMUX |= 0b00000110;
+  triggerADC();
+  return ADCH;
+}
+
+uint8_t readLeftSensor(){
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+  // Set MUX bits to use ADC10 (sensor 6)
+  ADMUX |= 0b00000010;
+  ADCSRB |= (1<<5);
+  triggerADC();
+  return ADCH;
 }
 
 // Init PWM on both motors.
@@ -81,10 +133,10 @@ void initPWM(){
 
   // Use this to control duty cycle
   // Must be under 255
-  OCR0A = 150;
-  OCR0B = 150;
+  OCR0A = 150;  // Left motor
+  OCR0B = 150;  // Right motor
 
-  // Set direction of right motor.
+  // Set direction of right motor. Left motor turns in forward direction by default.
   PORTE |= (1<<6);
 }
 
@@ -103,18 +155,4 @@ void triggerADC(){
   ADCSRA |= (1 << ADSC);
   // Wait until ADSC bit has been cleared (conversion complete)
   while (ADCSRA & (1<<ADSC));
-}
-
-void readTrimPots(){
-  // Clear MUX bits to use ADC0
-  ADMUX &= ~(0b00011111);
-  triggerADC();
-  // Use ADC value to set motor PWM output
-  OCR0A = 0b01010000 + (ADCH >> 4);
-
-  // Set MUX bits to use ADC1
-  ADMUX |= 1;
-  triggerADC();
-  // Use ADC value to set motor PWM output
-  OCR0B = 0b01010000 + (ADCH >> 4);
 }
