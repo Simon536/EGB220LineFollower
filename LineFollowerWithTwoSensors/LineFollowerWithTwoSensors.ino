@@ -10,10 +10,14 @@
 // The left sensor should be connected to PD7 (sensor 6).
 // The right sensor should be connected to PF6 (sensor 3).
 
+// Set up calibration variables. These values will be overwritten during the calibration phase.
+int16_t calibrated_min_error = 500;
+int16_t calibrated_max_error = -500;
+
 int main()
 {
   initADC();
-  initPWM();
+  calibrateSensorValues();
 
   // Turn on IR LEDs.
   DDRB |= (1<<3);
@@ -21,6 +25,8 @@ int main()
 
   // Enable LED2 and LED3
   DDRB |= (1<<1)|(1<<2);
+
+  initPWM();
 
   while (1)
   {
@@ -53,6 +59,34 @@ int main()
 
     // This control loop repeats at most 40 times per second.
     _delay_ms(25);
+  }
+}
+
+// Find the maximum and minimum error values under current conditions.
+void calibrateSensorValues(){
+  // Turn on both debug LEDs
+  PORTB |= (1<<2)|(1<<1);
+
+  for (int i = 0; i < 2000; i++){
+    uint8_t reading_right = readRightSensor();
+    uint8_t reading_left = readLeftSensor();
+    int16_t error = reading_right - reading_left;
+
+    if (error > calibrated_max_error){
+      calibrated_max_error = error;
+    }
+    if (error < calibrated_min_error){
+      calibrated_min_error = error;
+    }
+    _delay_ms(2);
+  }
+
+  // Warn user that calibration is complete by flashing LEDs.
+  for (int i = 0; i < 5; i++){
+    PORTB |= (1<<2)|(1<<1);
+    _delay_ms(500);
+    PORTB &= ~((1<<2)|(1<<1));
+    _delay_ms(500);
   }
 }
 
