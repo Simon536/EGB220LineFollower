@@ -58,7 +58,7 @@ uint8_t readRightSensor(){
   return ADCH;
 }
 
-uint_t readLeftSensor(){
+uint8_t readLeftSensor(){
   // Clear MUX bits
   ADMUX &= ~(0b00011111);
   ADCSRB &= ~(1<<5);
