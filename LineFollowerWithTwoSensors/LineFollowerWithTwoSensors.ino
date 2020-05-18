@@ -24,22 +24,9 @@ int main()
 
   while (1)
   {
-    // Clear MUX bits
-    ADMUX &= ~(0b00011111);
-    ADCSRB &= ~(1<<5);
-    // Set MUX bits to use ADC6 (sensor 3)
-    ADMUX |= 0b00000110;
-    triggerADC();
-    uint8_t reading_right = ADCH;
+    uint8_t reading_right = readRightSensor();
 
-    // Clear MUX bits
-    ADMUX &= ~(0b00011111);
-    ADCSRB &= ~(1<<5);
-    // Set MUX bits to use ADC10 (sensor 6)
-    ADMUX |= 0b00000010;
-    ADCSRB |= (1<<5);
-    triggerADC();
-    uint8_t reading_left = ADCH;
+    uint8_t reading_left = readLeftSensor();
 
     if (reading_left > reading_right){
       // Turn to the left
@@ -56,8 +43,30 @@ int main()
       OCR0B = ROBOT_SPEED_RIGHT;
     }
 
-    _delay_ms(50);
+    // This control loop repeats at most 40 times per second.
+    _delay_ms(25);
   }
+}
+
+uint8_t readRightSensor(){
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+  // Set MUX bits to use ADC6 (sensor 3)
+  ADMUX |= 0b00000110;
+  triggerADC();
+  return ADCH;
+}
+
+uint_t readLeftSensor(){
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+  // Set MUX bits to use ADC10 (sensor 6)
+  ADMUX |= 0b00000010;
+  ADCSRB |= (1<<5);
+  triggerADC();
+  return ADCH;
 }
 
 // Init PWM on both motors.
@@ -81,10 +90,10 @@ void initPWM(){
 
   // Use this to control duty cycle
   // Must be under 255
-  OCR0A = 150;
-  OCR0B = 150;
+  OCR0A = 150;  // Left motor
+  OCR0B = 150;  // Right motor
 
-  // Set direction of right motor.
+  // Set direction of right motor. Left motor turns in forward direction by default.
   PORTE |= (1<<6);
 }
 
