@@ -104,17 +104,3 @@ void triggerADC(){
   // Wait until ADSC bit has been cleared (conversion complete)
   while (ADCSRA & (1<<ADSC));
 }
-
-void readTrimPots(){
-  // Clear MUX bits to use ADC0
-  ADMUX &= ~(0b00011111);
-  triggerADC();
-  // Use ADC value to set motor PWM output
-  OCR0A = 0b01010000 + (ADCH >> 4);
-
-  // Set MUX bits to use ADC1
-  ADMUX |= 1;
-  triggerADC();
-  // Use ADC value to set motor PWM output
-  OCR0B = 0b01010000 + (ADCH >> 4);
-}
