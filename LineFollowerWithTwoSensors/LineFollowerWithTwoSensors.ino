@@ -2,9 +2,9 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 70
-#define ROBOT_SPEED_LEFT 80
-#define MAX_DESIRED_ERROR 40;
+#define ROBOT_SPEED_RIGHT 40
+#define ROBOT_SPEED_LEFT 40
+#define MAX_DESIRED_ERROR 30;
 
 // This code is designed for use with two sensors.
 // The left sensor should be connected to PD7 (sensor 6).
