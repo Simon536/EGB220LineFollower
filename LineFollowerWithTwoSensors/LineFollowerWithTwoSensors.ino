@@ -60,50 +60,6 @@ int main()
   }
 }
 
-// Display the four most significant bits of a number on LEDs 0-3.
-// Use for debugging purposes.
-void displayNumber(int num){
-  // Set Data Direction bits for LEDs 0-3
-  DDRE |= (1<<6);
-  DDRB |= (1<<2) | (1<<1) | 1;
-
-  if (num & (1<<7)){
-    // Turn on LED0
-    PORTE |= (1<<6);
-  }
-  else{
-    // Turn off LED0
-    PORTE &= ~(1<<6);
-  }
-
-  if (num & (1<<6)){
-    // Turn on LED0
-    PORTB |= (1);
-  }
-  else{
-    // Turn off LED0
-    PORTB &= ~(1);
-  }
-
-  if (num & (1<<5)){
-    // Turn on LED0
-    PORTB |= (1<<1);
-  }
-  else{
-    // Turn off LED0
-    PORTB &= ~(1<<1);
-  }
-
-  if (num & (1<<4)){
-    // Turn on LED0
-    PORTB |= (1<<2);
-  }
-  else{
-    // Turn off LED0
-    PORTB &= ~(1<<2);
-  }
-}
-
 // Init PWM on both motors.
 // Note that this will also start the motors immediately.
 void initPWM(){
