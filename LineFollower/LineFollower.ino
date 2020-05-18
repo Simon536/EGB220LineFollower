@@ -16,6 +16,7 @@ uint8_t error_scaler = 1;
 int main()
 {
   initADC();
+  initPWM();
   error_scaler = calibrateSensorValues();
 
   // Turn on IR LEDs.
@@ -24,8 +25,6 @@ int main()
 
   // Enable LED2 and LED3
   DDRB |= (1<<1)|(1<<2);
-
-  initPWM();
 
   while (1)
   {
@@ -65,19 +64,44 @@ uint8_t calibrateSensorValues(){
   // Turn on both debug LEDs
   PORTB |= (1<<2)|(1<<1);
 
-  for (int i = 0; i < 2000; i++){
-    uint8_t reading_right = readRightSensor();
-    uint8_t reading_left = readLeftSensor();
-    int16_t error = reading_right - reading_left;
+  for (int j = 0; j < 2; j++){
+    OCR0A = 60;  // Left motor
+    OCR0B = 60;  // Right motor
 
-    if (error > calibrated_max_error){
-      calibrated_max_error = error;
+    if (j == 0){
+      // Set direction of right motor.
+      PORTE &= ~(1<<6);
+      // Set direction of left motor.
+      PORTB &= ~1;
     }
-    if (error < calibrated_min_error){
-      calibrated_min_error = error;
+    else{
+      // Set direction of right motor.
+      PORTE |= (1<<6);
+      // Set direction of left motor.
+      PORTB |= 1;
     }
-    _delay_ms(2);
+
+    for (int i = 0; i < 1000; i++){
+      uint8_t reading_right = readRightSensor();
+      uint8_t reading_left = readLeftSensor();
+      int16_t error = reading_right - reading_left;
+
+      if (error > calibrated_max_error){
+        calibrated_max_error = error;
+      }
+      if (error < calibrated_min_error){
+        calibrated_min_error = error;
+      }
+      _delay_ms(2);
+    }
   }
+
+  OCR0A = 0;  // Left motor
+  OCR0B = 0;  // Right motor
+  // Set direction of right motor.
+  PORTE |= (1<<6);
+  // Set direction of left motor.
+  PORTB &= ~1;
 
   // Warn user that calibration is complete by flashing LEDs.
   for (int i = 0; i < 5; i++){
@@ -136,7 +160,6 @@ uint8_t readLeftSensor(){
 }
 
 // Init PWM on both motors.
-// Note that this will also start the motors immediately.
 void initPWM(){
   // Set up timer with prescaler = 256
   TCCR0B |= (1<<2);
@@ -156,11 +179,13 @@ void initPWM(){
 
   // Use this to control duty cycle
   // Must be under 255
-  OCR0A = 150;  // Left motor
-  OCR0B = 150;  // Right motor
+  OCR0A = 0;  // Left motor
+  OCR0B = 0;  // Right motor
 
-  // Set direction of right motor. Left motor turns in forward direction by default.
+  // Set direction of right motor.
   PORTE |= (1<<6);
+  // Set direction of left motor.
+  PORTB &= ~1;
 }
 
 // Init ADC before reading an analog voltage.
