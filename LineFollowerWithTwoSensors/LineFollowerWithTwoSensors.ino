@@ -2,22 +2,22 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 70
-#define ROBOT_SPEED_LEFT 50
+#define ROBOT_SPEED_RIGHT 90
+#define ROBOT_SPEED_LEFT 70
 #define TURN_RATE 25
+#define MAX_DESIRED_ERROR 40;
 
 // This code is designed for use with two sensors.
 // The left sensor should be connected to PD7 (sensor 6).
 // The right sensor should be connected to PF6 (sensor 3).
 
-// Set up calibration variables. These values will be overwritten during the calibration phase.
-int16_t calibrated_min_error = 500;
-int16_t calibrated_max_error = -500;
+// Scaling factor for error signal.
+uint8_t error_scaler = 1;
 
 int main()
 {
   initADC();
-  calibrateSensorValues();
+  error_scaler = calibrateSensorValues();
 
   // Turn on IR LEDs.
   DDRB |= (1<<3);
@@ -31,30 +31,25 @@ int main()
   while (1)
   {
     uint8_t reading_right = readRightSensor();
-
     uint8_t reading_left = readLeftSensor();
-
     int16_t error = reading_right - reading_left;
+
+    OCR0A = ROBOT_SPEED_LEFT + (error / error_scaler);
+    OCR0B = ROBOT_SPEED_RIGHT - (error / error_scaler);
 
     if (error < 0){
       // Turn to the left
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
-      OCR0A = ROBOT_SPEED_LEFT;
-      OCR0B = ROBOT_SPEED_RIGHT + TURN_RATE;
     }
     else if (error > 0){
       // Turn to the right
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
-      OCR0A = ROBOT_SPEED_LEFT + TURN_RATE;
-      OCR0B = ROBOT_SPEED_RIGHT;
     }
     else{
       // Go straight
       PORTB |= (1<<2)|(1<<1);
-      OCR0A = ROBOT_SPEED_LEFT;
-      OCR0B = ROBOT_SPEED_RIGHT;
     }
 
     // This control loop repeats at most 40 times per second.
@@ -63,7 +58,11 @@ int main()
 }
 
 // Find the maximum and minimum error values under current conditions.
-void calibrateSensorValues(){
+uint8_t calibrateSensorValues(){
+  // Set up calibration variables. These values will be overwritten during the calibration phase.
+  int16_t calibrated_min_error = 500;
+  int16_t calibrated_max_error = -500;
+
   // Turn on both debug LEDs
   PORTB |= (1<<2)|(1<<1);
 
@@ -88,6 +87,8 @@ void calibrateSensorValues(){
     PORTB &= ~((1<<2)|(1<<1));
     _delay_ms(500);
   }
+
+  return calibrated_max_error/MAX_DESIRED_ERROR;
 }
 
 uint8_t readRightSensor(){
