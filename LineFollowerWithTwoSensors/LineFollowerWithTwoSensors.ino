@@ -2,9 +2,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 90
+#define ROBOT_SPEED_RIGHT 70
 #define ROBOT_SPEED_LEFT 70
-#define TURN_RATE 25
 #define MAX_DESIRED_ERROR 40;
 
 // This code is designed for use with two sensors.
