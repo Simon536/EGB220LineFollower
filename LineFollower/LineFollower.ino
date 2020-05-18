@@ -6,11 +6,11 @@
 #define ROBOT_SPEED_LEFT 40
 #define MAX_DESIRED_ERROR 30;
 
-// This code is designed for use with two sensors.
-// The left sensor should be connected to PD7 (sensor 6).
-// The right sensor should be connected to PF6 (sensor 3).
+// This code is designed for use with QTR-8A sensor board.
+// The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
+// The right sensors are connected to PF5 & PF6 (sensors 2 & 3).
 
-// Scaling factor for error signal.
+// Scaling factor for error signal. This value is overwritten during calibration.
 uint8_t error_scaler = 1;
 
 int main()
@@ -97,7 +97,18 @@ uint8_t readRightSensor(){
   // Set MUX bits to use ADC6 (sensor 3)
   ADMUX |= 0b00000110;
   triggerADC();
-  return ADCH;
+  uint8_t sen3val = ADCH;
+  sen3val = sen3val / 2;
+
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  // Set MUX bits to use ADC5 (sensor 2)
+  ADMUX |= 0b00000101;
+  triggerADC();
+  uint8_t sen2val = ADCH;
+  sen2val = sen2val / 2;
+
+  return sen2val + sen3val;
 }
 
 uint8_t readLeftSensor(){
@@ -108,7 +119,20 @@ uint8_t readLeftSensor(){
   ADMUX |= 0b00000010;
   ADCSRB |= (1<<5);
   triggerADC();
-  return ADCH;
+  uint8_t sen6val = ADCH;
+  sen6val = sen6val / 2;
+
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+  // Set MUX bits to use ADC9 (sensor 7)
+  ADMUX |= 0b00000001;
+  ADCSRB |= (1<<5);
+  triggerADC();
+  uint8_t sen7val = ADCH;
+  sen7val = sen7val / 2;
+
+  return sen6val + sen7val;
 }
 
 // Init PWM on both motors.
