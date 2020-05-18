@@ -3,7 +3,7 @@
 #include <util/delay.h>
 
 #define ROBOT_SPEED_RIGHT 70
-#define ROBOT_SPEED_LEFT 70
+#define ROBOT_SPEED_LEFT 80
 #define MAX_DESIRED_ERROR 40;
 
 // This code is designed for use with two sensors.
