@@ -16,7 +16,7 @@ uint8_t error_scaler = 1;
 int main()
 {
   initADC();
-  initPWM();
+
   error_scaler = calibrateSensorValues();
 
   // Turn on IR LEDs.
@@ -25,6 +25,8 @@ int main()
 
   // Enable LED2 and LED3
   DDRB |= (1<<1)|(1<<2);
+
+  initPWM();
 
   while (1)
   {
@@ -76,14 +78,6 @@ uint8_t calibrateSensorValues(){
   // Turn on both debug LEDs
   PORTB |= (1<<2)|(1<<1);
 
-  OCR0A = 80;  // Left motor
-  OCR0B = 80;  // Right motor
-
-  // Set direction of right motor.
-  PORTE |= (1<<6);
-  // Set direction of left motor.
-  PORTB |= 1;
-
   for (int i = 0; i < 1500; i++){
     uint8_t reading_right = readRightSensor();
     uint8_t reading_left = readLeftSensor();
@@ -97,13 +91,6 @@ uint8_t calibrateSensorValues(){
     }
     _delay_ms(2);
   }
-
-  OCR0A = 0;  // Left motor
-  OCR0B = 0;  // Right motor
-  // Set direction of right motor.
-  PORTE |= (1<<6);
-  // Set direction of left motor.
-  PORTB &= ~1;
 
   // Warn user that calibration is complete by flashing LEDs.
   for (int i = 0; i < 5; i++){
