@@ -4,7 +4,7 @@
 
 #define ROBOT_SPEED_RIGHT 40
 #define ROBOT_SPEED_LEFT 40
-#define MAX_DESIRED_ERROR 30;
+#define MAX_DESIRED_ERROR 35
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
@@ -32,9 +32,21 @@ int main()
     uint8_t reading_left = readLeftSensor();
     int16_t error = reading_right - reading_left;
 
-    OCR0A = ROBOT_SPEED_LEFT + (error / error_scaler);
-    OCR0B = ROBOT_SPEED_RIGHT - (error / error_scaler);
+    // Scale error signal correctly.
+    int16_t scaled_error = error / error_scaler;
+    // Ensure that error signal does not leave desired range.
+    if (scaled_error > MAX_DESIRED_ERROR){
+      scaled_error = MAX_DESIRED_ERROR;
+    }
+    if ((scaled_error + MAX_DESIRED_ERROR) < 0){
+      scaled_error = 0 - MAX_DESIRED_ERROR;
+    }
 
+    // Set left and right wheel speeds, using scaled error signal.
+    OCR0A = ROBOT_SPEED_LEFT + scaled_error;
+    OCR0B = ROBOT_SPEED_RIGHT - scaled_error;
+
+    // Set debugging LEDs
     if (error < 0){
       // Turn to the left
       PORTB |= (1<<1);
@@ -50,8 +62,8 @@ int main()
       PORTB |= (1<<2)|(1<<1);
     }
 
-    // This control loop repeats at most 40 times per second.
-    _delay_ms(25);
+    // This control loop repeats at most 50 times per second.
+    _delay_ms(20);
   }
 }
 
