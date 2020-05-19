@@ -12,6 +12,7 @@
 
 // Scaling factor for error signal. This value is overwritten during calibration.
 uint8_t error_scaler = 1;
+int16_t last_error = 0;
 
 int main()
 {
@@ -44,8 +45,11 @@ int main()
       scaled_error = 0 - MAX_DESIRED_ERROR;
     }
 
-    int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error;
-    int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error;
+    int16_t error_deriv = scaled_error - last_error;
+    last_error = scaled_error;
+
+    int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error + error_deriv;
+    int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error - error_deriv;
 
     wheelController(left_wheel_speed, right_wheel_speed);
 
