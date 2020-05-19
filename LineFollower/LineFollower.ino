@@ -134,7 +134,6 @@ uint8_t readRightSensor(){
   ADMUX |= 0b00000110;
   triggerADC();
   uint8_t sen3val = ADCH;
-  sen3val = sen3val / 2;
 
   // Clear MUX bits
   ADMUX &= ~(0b00011111);
@@ -142,9 +141,13 @@ uint8_t readRightSensor(){
   ADMUX |= 0b00000101;
   triggerADC();
   uint8_t sen2val = ADCH;
-  sen2val = sen2val / 2;
 
-  return sen2val + sen3val;
+  if (sen2val > sen3val){
+    return sen2val;
+  }
+  else{
+    return sen3val;
+  }
 }
 
 uint8_t readLeftSensor(){
@@ -156,7 +159,6 @@ uint8_t readLeftSensor(){
   ADCSRB |= (1<<5);
   triggerADC();
   uint8_t sen6val = ADCH;
-  sen6val = sen6val / 2;
 
   // Clear MUX bits
   ADMUX &= ~(0b00011111);
@@ -166,9 +168,13 @@ uint8_t readLeftSensor(){
   ADCSRB |= (1<<5);
   triggerADC();
   uint8_t sen7val = ADCH;
-  sen7val = sen7val / 2;
 
-  return sen6val + sen7val;
+  if (sen6val > sen7val){
+    return sen6val;
+  }
+  else{
+    return sen7val;
+  }
 }
 
 // Init PWM on both motors.
