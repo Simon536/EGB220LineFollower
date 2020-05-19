@@ -4,7 +4,7 @@
 
 #define ROBOT_SPEED_RIGHT 50
 #define ROBOT_SPEED_LEFT 50
-#define MAX_DESIRED_ERROR 48
+#define MAX_DESIRED_ERROR 70
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
@@ -44,9 +44,10 @@ int main()
       scaled_error = 0 - MAX_DESIRED_ERROR;
     }
 
-    // Set left and right wheel speeds, using scaled error signal.
-    OCR0A = ROBOT_SPEED_LEFT + scaled_error;
-    OCR0B = ROBOT_SPEED_RIGHT - scaled_error;
+    int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error;
+    int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error;
+
+    wheelController(left_wheel_speed, right_wheel_speed);
 
     // Set debugging LEDs
     if (error < 0){
@@ -151,6 +152,36 @@ uint8_t readLeftSensor(){
   }
   else{
     return sen7val;
+  }
+}
+
+void wheelController(int16_t left_wheel_speed, int16_t right_wheel_speed){
+  // Left wheel
+  if (left_wheel_speed < 0){
+    // Set direction of left motor.
+    PORTB |= 1;
+    // Set speed of left motor.
+    OCR0A = (uint8_t)(left_wheel_speed * -1);
+  }
+  else{
+    // Set direction of left motor.
+    PORTB &= ~1;
+    // Set speed of left motor.
+    OCR0A = (uint8_t)(left_wheel_speed);
+  }
+
+  // Right wheel
+  if (right_wheel_speed < 0){
+    // Set direction of right motor.
+    PORTE &= ~(1<<6);
+    // Set speed of right motor.
+    OCR0B = (uint8_t)(right_wheel_speed * -1);
+  }
+  else{
+    // Set direction of right motor.
+    PORTE |= (1<<6);
+    // Set speed of right motor.
+    OCR0B = (uint8_t)(right_wheel_speed);
   }
 }
 
