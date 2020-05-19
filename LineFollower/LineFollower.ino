@@ -2,9 +2,9 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 40
-#define ROBOT_SPEED_LEFT 40
-#define MAX_DESIRED_ERROR 35
+#define ROBOT_SPEED_RIGHT 50
+#define ROBOT_SPEED_LEFT 50
+#define MAX_DESIRED_ERROR 48
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
