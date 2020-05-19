@@ -4,14 +4,16 @@
 
 #define ROBOT_SPEED_RIGHT 50
 #define ROBOT_SPEED_LEFT 50
-#define MAX_DESIRED_ERROR 90
+#define MAX_DESIRED_ERROR 100
+#define PROPORTIONAL_GAIN 2
+#define DERIVATIVE_GAIN 2
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
 // The right sensors are connected to PF5 & PF6 (sensors 2 & 3).
 
 // Scaling factor for error signal. This value is overwritten during calibration.
-uint8_t error_scaler = 1;
+float error_scaler = 1;
 int16_t last_error = 0;
 
 int main()
@@ -36,7 +38,7 @@ int main()
     int16_t error = reading_right - reading_left;
 
     // Scale error signal correctly.
-    int16_t scaled_error = error / error_scaler;
+    int16_t scaled_error = (float) error / error_scaler;
     // Ensure that error signal does not leave desired range.
     if (scaled_error > MAX_DESIRED_ERROR){
       scaled_error = MAX_DESIRED_ERROR;
@@ -45,8 +47,10 @@ int main()
       scaled_error = 0 - MAX_DESIRED_ERROR;
     }
 
-    int16_t error_deriv = scaled_error - last_error;
+    int16_t error_deriv = (scaled_error - last_error) * DERIVATIVE_GAIN;
     last_error = scaled_error;
+
+    scaled_error = scaled_error * PROPORTIONAL_GAIN;
 
     int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error + error_deriv;
     int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error - error_deriv;
@@ -69,13 +73,13 @@ int main()
       PORTB |= (1<<2)|(1<<1);
     }
 
-    // This control loop repeats at most 50 times per second.
-    _delay_ms(20);
+    // This control loop repeats at most 100 times per second.
+    _delay_ms(10);
   }
 }
 
 // Find the maximum and minimum error values under current conditions.
-uint8_t calibrateSensorValues(){
+float calibrateSensorValues(){
   // Set up calibration variables. These values will be overwritten during the calibration phase.
   int16_t calibrated_min_error = 500;
   int16_t calibrated_max_error = -500;
