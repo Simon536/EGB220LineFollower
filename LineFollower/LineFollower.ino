@@ -84,7 +84,7 @@ uint8_t calibrateSensorValues(){
   // Set direction of left motor.
   PORTB |= 1;
 
-  for (int i = 0; i < 1000; i++){
+  for (int i = 0; i < 1500; i++){
     uint8_t reading_right = readRightSensor();
     uint8_t reading_left = readLeftSensor();
     int16_t error = reading_right - reading_left;
