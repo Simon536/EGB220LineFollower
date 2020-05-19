@@ -76,36 +76,26 @@ uint8_t calibrateSensorValues(){
   // Turn on both debug LEDs
   PORTB |= (1<<2)|(1<<1);
 
-  for (int j = 0; j < 2; j++){
-    OCR0A = 60;  // Left motor
-    OCR0B = 60;  // Right motor
+  OCR0A = 80;  // Left motor
+  OCR0B = 80;  // Right motor
 
-    if (j == 0){
-      // Set direction of right motor.
-      PORTE &= ~(1<<6);
-      // Set direction of left motor.
-      PORTB &= ~1;
-    }
-    else{
-      // Set direction of right motor.
-      PORTE |= (1<<6);
-      // Set direction of left motor.
-      PORTB |= 1;
-    }
+  // Set direction of right motor.
+  PORTE |= (1<<6);
+  // Set direction of left motor.
+  PORTB |= 1;
 
-    for (int i = 0; i < 1000; i++){
-      uint8_t reading_right = readRightSensor();
-      uint8_t reading_left = readLeftSensor();
-      int16_t error = reading_right - reading_left;
+  for (int i = 0; i < 1000; i++){
+    uint8_t reading_right = readRightSensor();
+    uint8_t reading_left = readLeftSensor();
+    int16_t error = reading_right - reading_left;
 
-      if (error > calibrated_max_error){
-        calibrated_max_error = error;
-      }
-      if (error < calibrated_min_error){
-        calibrated_min_error = error;
-      }
-      _delay_ms(2);
+    if (error > calibrated_max_error){
+      calibrated_max_error = error;
     }
+    if (error < calibrated_min_error){
+      calibrated_min_error = error;
+    }
+    _delay_ms(2);
   }
 
   OCR0A = 0;  // Left motor
