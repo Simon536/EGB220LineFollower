@@ -16,6 +16,10 @@
 float error_scaler = 1;
 int16_t last_error = 0;
 
+// Used to find the average value of the last 16 errors.
+int8_t error_history[16];
+uint8_t history_index = 0;
+
 int main()
 {
   initADC();
@@ -25,6 +29,9 @@ int main()
   // Turn on IR LEDs.
   DDRB |= (1<<3);
   PORTB |= (1<<3);
+
+  // Enable Debug Pin
+  DDRD |= (1<<1);
 
   // Enable LED2 and LED3
   DDRB |= (1<<1)|(1<<2);
@@ -57,13 +64,23 @@ int main()
 
     wheelController(left_wheel_speed, right_wheel_speed);
 
+    error_history[history_index] = (int8_t)(error/16);
+    history_index++;
+    if (history_index > 15){
+      history_index = 0;
+    }
+    int16_t average_error = 0;
+    for (uint8_t i = 0; i < 16; i++){
+      average_error += error_history[i];
+    }
+
     // Set debugging LEDs
-    if (error < 0){
+    if (average_error < -10){
       // Turn to the left
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
     }
-    else if (error > 0){
+    else if (average_error > 10){
       // Turn to the right
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
@@ -73,8 +90,10 @@ int main()
       PORTB |= (1<<2)|(1<<1);
     }
 
-    // This control loop repeats at most 100 times per second.
-    _delay_ms(10);
+    // This control loop repeats at most 200 times per second.
+    PORTD |= (1<<1);
+    _delay_ms(5);
+    PORTD &= ~(1<<1);
   }
 }
 
