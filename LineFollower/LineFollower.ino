@@ -2,15 +2,20 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 50
-#define ROBOT_SPEED_LEFT 50
+#define ROBOT_SPEED_RIGHT 40
+#define ROBOT_SPEED_LEFT 40
+#define SPEED_BOOST_STRAIGHT 30
 #define MAX_DESIRED_ERROR 100
 #define PROPORTIONAL_GAIN 2
-#define DERIVATIVE_GAIN 2
+#define DERIVATIVE_GAIN 4
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
 // The right sensors are connected to PF5 & PF6 (sensors 2 & 3).
+
+// Two more sensors are required for sensing the markers at the side of the track.
+// The left one should be attached to PF1.
+// The right one should be attached to PF0.
 
 // Scaling factor for error signal. This value is overwritten during calibration.
 float error_scaler = 1;
@@ -62,8 +67,6 @@ int main()
     int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error + error_deriv;
     int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error - error_deriv;
 
-    wheelController(left_wheel_speed, right_wheel_speed);
-
     error_history[history_index] = (int8_t)(error/16);
     history_index++;
     if (history_index > 15){
@@ -88,7 +91,11 @@ int main()
     else{
       // Go straight
       PORTB |= (1<<2)|(1<<1);
+      left_wheel_speed += SPEED_BOOST_STRAIGHT;
+      right_wheel_speed += SPEED_BOOST_STRAIGHT;
     }
+
+    wheelController(left_wheel_speed, right_wheel_speed);
 
     // This control loop repeats at most 200 times per second.
     PORTD |= (1<<1);
