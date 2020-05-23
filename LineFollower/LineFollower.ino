@@ -7,15 +7,21 @@
 #define SPEED_BOOST_STRAIGHT 30
 #define MAX_DESIRED_ERROR 100
 #define PROPORTIONAL_GAIN 2
-#define DERIVATIVE_GAIN 4
+#define DERIVATIVE_GAIN 5
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
 // The right sensors are connected to PF5 & PF6 (sensors 2 & 3).
 
 // Two more sensors are required for sensing the markers at the side of the track.
+
+// If using external sensors.
 // The left one should be attached to PF1.
 // The right one should be attached to PF0.
+
+// If using QTR-8A sensor board for this function as well.
+// The left one is connected to PD4 (sensor 8).
+// The right one is connected to PF4 (sensor 1).
 
 // Scaling factor for error signal. This value is overwritten during calibration.
 float error_scaler = 1;
@@ -35,7 +41,7 @@ int main()
   DDRB |= (1<<3);
   PORTB |= (1<<3);
 
-  // Enable Debug Pin
+  // Enable Debug Pin (D1).
   DDRD |= (1<<1);
 
   // Enable LED2 and LED3
@@ -93,6 +99,7 @@ int main()
       PORTB |= (1<<2)|(1<<1);
       left_wheel_speed += SPEED_BOOST_STRAIGHT;
       right_wheel_speed += SPEED_BOOST_STRAIGHT;
+      checkForStartStopMarker();
     }
 
     wheelController(left_wheel_speed, right_wheel_speed);
@@ -101,6 +108,36 @@ int main()
     PORTD |= (1<<1);
     _delay_ms(5);
     PORTD &= ~(1<<1);
+  }
+}
+
+// This function checks for the start/stop marker and will auto-stop for 2.5 seconds if it is detected.
+void checkForStartStopMarker(){
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+
+  // Set MUX bits to use ADC4 (sensor 1)
+  ADMUX |= 0b00000100;
+
+  triggerADC();
+
+  // Check far right sensor value
+  if (ADCH > 180){
+    // Clear MUX bits
+    ADMUX &= ~(0b00011111);
+    ADCSRB &= ~(1<<5);
+
+    // Set MUX bits to use ADC8 (sensor 8)
+    ADCSRB |= (1<<5);
+
+    triggerADC();
+
+    // Check far left sensor value to avoid stopping at intersections.
+    if (ADCH < 130){
+      wheelController( 0, 0);
+      _delay_ms(2500);
+    }
   }
 }
 
