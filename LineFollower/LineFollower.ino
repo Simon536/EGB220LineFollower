@@ -33,19 +33,16 @@ uint8_t history_index = 0;
 
 int main()
 {
-  initADC();
+  // Enable LED2 and LED3
+  DDRB |= (1<<1)|(1<<2);
 
-  error_scaler = calibrateSensorValues();
+  initADC();
 
   // Turn on IR LEDs.
   DDRB |= (1<<3);
   PORTB |= (1<<3);
 
-  // Enable Debug Pin (D1).
-  DDRD |= (1<<1);
-
-  // Enable LED2 and LED3
-  DDRB |= (1<<1)|(1<<2);
+  error_scaler = calibrateSensorValues();
 
   initPWM();
 
@@ -84,12 +81,12 @@ int main()
     }
 
     // Set debugging LEDs
-    if (average_error < -10){
+    if (average_error < -8){
       // Turn to the left
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
     }
-    else if (average_error > 10){
+    else if (average_error > 8){
       // Turn to the right
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
@@ -105,9 +102,7 @@ int main()
     wheelController(left_wheel_speed, right_wheel_speed);
 
     // This control loop repeats at most 200 times per second.
-    PORTD |= (1<<1);
     _delay_ms(5);
-    PORTD &= ~(1<<1);
   }
 }
 
