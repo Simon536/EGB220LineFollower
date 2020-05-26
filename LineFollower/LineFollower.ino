@@ -48,13 +48,14 @@ int main()
 
   while (1)
   {
+    // Create error signal based on difference between readings from left and right sensors.
     uint8_t reading_right = readRightSensor();
     uint8_t reading_left = readLeftSensor();
     int16_t error = reading_right - reading_left;
 
     // Scale error signal correctly.
     int16_t scaled_error = (float) error / error_scaler;
-    // Ensure that error signal does not leave desired range.
+    // Clamp error signal to desired range.
     if (scaled_error > MAX_DESIRED_ERROR){
       scaled_error = MAX_DESIRED_ERROR;
     }
@@ -62,14 +63,18 @@ int main()
       scaled_error = 0 - MAX_DESIRED_ERROR;
     }
 
+    // Create derivative term by subtracting the last error from this error.
     int16_t error_deriv = (scaled_error - last_error) * DERIVATIVE_GAIN;
     last_error = scaled_error;
 
+    // Create proportional term.
     scaled_error = scaled_error * PROPORTIONAL_GAIN;
 
+    // Generate left and right wheel speeds. These values will be passed to the wheel controller.
     int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error + error_deriv;
     int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error - error_deriv;
 
+    // Find the average error over the last 16 readings.
     error_history[history_index] = (int8_t)(error/16);
     history_index++;
     if (history_index > 15){
@@ -82,17 +87,17 @@ int main()
 
     // Set debugging LEDs
     if (average_error < -8){
-      // Turn to the left
+      // Turn on left LED because the robot is turning left.
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
     }
     else if (average_error > 8){
-      // Turn to the right
+      // Turn on right LED because the robot is turning right.
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
     }
     else{
-      // Go straight
+      // Turn on both LEDs and also check for a stop marker because the robot is going straight.
       PORTB |= (1<<2)|(1<<1);
       left_wheel_speed += SPEED_BOOST_STRAIGHT;
       right_wheel_speed += SPEED_BOOST_STRAIGHT;
@@ -106,7 +111,7 @@ int main()
   }
 }
 
-// This function checks for the start/stop marker and will auto-stop for 2.5 seconds if it is detected.
+// This function checks for the start/stop marker and will auto-stop for 3 seconds if it is detected.
 void checkForStartStopMarker(){
   // Clear MUX bits
   ADMUX &= ~(0b00011111);
@@ -131,7 +136,7 @@ void checkForStartStopMarker(){
     // Check far left sensor value to avoid stopping at intersections.
     if (ADCH < 130){
       wheelController( 0, 0);
-      _delay_ms(2500);
+      _delay_ms(3000);
     }
   }
 }
