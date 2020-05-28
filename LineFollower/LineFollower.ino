@@ -86,12 +86,12 @@ int main()
     }
 
     // Set debugging LEDs
-    if (average_error < -8){
+    if (average_error < -9){
       // Turn on left LED because the robot is turning left.
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
     }
-    else if (average_error > 8){
+    else if (average_error > 9){
       // Turn on right LED because the robot is turning right.
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
@@ -123,7 +123,7 @@ void checkForStartStopMarker(){
   triggerADC();
 
   // Check far right sensor value
-  if (ADCH > 180){
+  if (ADCH > 170){
     // Clear MUX bits
     ADMUX &= ~(0b00011111);
     ADCSRB &= ~(1<<5);
@@ -134,7 +134,7 @@ void checkForStartStopMarker(){
     triggerADC();
 
     // Check far left sensor value to avoid stopping at intersections.
-    if (ADCH < 130){
+    if (ADCH < 140){
       wheelController( 0, 0);
       _delay_ms(3000);
     }
