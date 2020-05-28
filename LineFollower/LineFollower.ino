@@ -2,44 +2,60 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define ROBOT_SPEED_RIGHT 50
-#define ROBOT_SPEED_LEFT 50
+#define ROBOT_SPEED_RIGHT 40
+#define ROBOT_SPEED_LEFT 40
+#define SPEED_BOOST_STRAIGHT 30
 #define MAX_DESIRED_ERROR 100
 #define PROPORTIONAL_GAIN 2
-#define DERIVATIVE_GAIN 2
+#define DERIVATIVE_GAIN 5
 
 // This code is designed for use with QTR-8A sensor board.
 // The left sensors are connected to PD7 & PD6 (sensors 6 & 7).
 // The right sensors are connected to PF5 & PF6 (sensors 2 & 3).
 
+// Two more sensors are required for sensing the markers at the side of the track.
+
+// If using external sensors.
+// The left one should be attached to PF1.
+// The right one should be attached to PF0.
+
+// If using QTR-8A sensor board for this function as well.
+// The left one is connected to PD4 (sensor 8).
+// The right one is connected to PF4 (sensor 1).
+
 // Scaling factor for error signal. This value is overwritten during calibration.
 float error_scaler = 1;
 int16_t last_error = 0;
 
+// Used to find the average value of the last 16 errors.
+int8_t error_history[16];
+uint8_t history_index = 0;
+
 int main()
 {
-  initADC();
+  // Enable LED2 and LED3
+  DDRB |= (1<<1)|(1<<2);
 
-  error_scaler = calibrateSensorValues();
+  initADC();
 
   // Turn on IR LEDs.
   DDRB |= (1<<3);
   PORTB |= (1<<3);
 
-  // Enable LED2 and LED3
-  DDRB |= (1<<1)|(1<<2);
+  error_scaler = calibrateSensorValues();
 
   initPWM();
 
   while (1)
   {
+    // Create error signal based on difference between readings from left and right sensors.
     uint8_t reading_right = readRightSensor();
     uint8_t reading_left = readLeftSensor();
     int16_t error = reading_right - reading_left;
 
     // Scale error signal correctly.
     int16_t scaled_error = (float) error / error_scaler;
-    // Ensure that error signal does not leave desired range.
+    // Clamp error signal to desired range.
     if (scaled_error > MAX_DESIRED_ERROR){
       scaled_error = MAX_DESIRED_ERROR;
     }
@@ -47,34 +63,81 @@ int main()
       scaled_error = 0 - MAX_DESIRED_ERROR;
     }
 
+    // Create derivative term by subtracting the last error from this error.
     int16_t error_deriv = (scaled_error - last_error) * DERIVATIVE_GAIN;
     last_error = scaled_error;
 
+    // Create proportional term.
     scaled_error = scaled_error * PROPORTIONAL_GAIN;
 
+    // Generate left and right wheel speeds. These values will be passed to the wheel controller.
     int16_t left_wheel_speed = ROBOT_SPEED_LEFT + scaled_error + error_deriv;
     int16_t right_wheel_speed = ROBOT_SPEED_RIGHT - scaled_error - error_deriv;
 
-    wheelController(left_wheel_speed, right_wheel_speed);
+    // Find the average error over the last 16 readings.
+    error_history[history_index] = (int8_t)(error/16);
+    history_index++;
+    if (history_index > 15){
+      history_index = 0;
+    }
+    int16_t average_error = 0;
+    for (uint8_t i = 0; i < 16; i++){
+      average_error += error_history[i];
+    }
 
     // Set debugging LEDs
-    if (error < 0){
-      // Turn to the left
+    if (average_error < -9){
+      // Turn on left LED because the robot is turning left.
       PORTB |= (1<<1);
       PORTB &= ~(1<<2);
     }
-    else if (error > 0){
-      // Turn to the right
+    else if (average_error > 9){
+      // Turn on right LED because the robot is turning right.
       PORTB |= (1<<2);
       PORTB &= ~(1<<1);
     }
     else{
-      // Go straight
+      // Turn on both LEDs and also check for a stop marker because the robot is going straight.
       PORTB |= (1<<2)|(1<<1);
+      left_wheel_speed += SPEED_BOOST_STRAIGHT;
+      right_wheel_speed += SPEED_BOOST_STRAIGHT;
+      checkForStartStopMarker();
     }
 
-    // This control loop repeats at most 100 times per second.
-    _delay_ms(10);
+    wheelController(left_wheel_speed, right_wheel_speed);
+
+    // This control loop repeats at most 200 times per second.
+    _delay_ms(5);
+  }
+}
+
+// This function checks for the start/stop marker and will auto-stop for 3 seconds if it is detected.
+void checkForStartStopMarker(){
+  // Clear MUX bits
+  ADMUX &= ~(0b00011111);
+  ADCSRB &= ~(1<<5);
+
+  // Set MUX bits to use ADC4 (sensor 1)
+  ADMUX |= 0b00000100;
+
+  triggerADC();
+
+  // Check far right sensor value
+  if (ADCH > 170){
+    // Clear MUX bits
+    ADMUX &= ~(0b00011111);
+    ADCSRB &= ~(1<<5);
+
+    // Set MUX bits to use ADC8 (sensor 8)
+    ADCSRB |= (1<<5);
+
+    triggerADC();
+
+    // Check far left sensor value to avoid stopping at intersections.
+    if (ADCH < 140){
+      wheelController( 0, 0);
+      _delay_ms(3000);
+    }
   }
 }
 
